@@ -3,11 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit && vite build && node scripts/bundle-api.mjs",
     "preview": "vite preview",
-    "start": "vite preview"
+    "start": "vite preview",
+    "test": "node scripts/funding-check.mjs && node scripts/stake-check.mjs && node scripts/rate-limit-check.ts"
   },
   "dependencies": {
     "@defuse-protocol/one-click-sdk-typescript": "^0.1.26",

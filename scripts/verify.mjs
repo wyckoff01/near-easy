@@ -1,19 +1,44 @@
 import puppeteer from 'puppeteer-core';
-import { mkdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 
 const base = process.env.APP_URL ?? 'http://127.0.0.1:5173';
-const chrome = [
-  process.env.CHROME_PATH,
-  process.env.PUPPETEER_EXECUTABLE_PATH,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable',
-  '/usr/bin/chromium',
-  '/usr/bin/chromium-browser',
-].find((candidate) => candidate && existsSync(candidate));
+
+function chromeOnPath(name) {
+  try {
+    const found = execFileSync('which', [name], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return found && existsSync(found) ? found : '';
+  } catch {
+    return '';
+  }
+}
+
+function findChrome() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    process.env.PUPPETEER_EXECUTABLE_PATH,
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/snap/bin/chromium',
+  ];
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  for (const name of ['google-chrome-stable', 'google-chrome', 'chromium', 'chromium-browser']) {
+    const found = chromeOnPath(name);
+    if (found) return found;
+  }
+  return '';
+}
+
+const chrome = findChrome();
 if (!chrome) {
-  console.error('Chrome/Chromium not found. Set CHROME_PATH to your browser executable.');
+  console.error('Chrome or Chromium was not found. On macOS, install Google Chrome or Chromium in /Applications. On Linux, install google-chrome or chromium so it is on PATH. Or set CHROME_PATH to the browser executable.');
   process.exit(1);
 }
 const out = '/tmp/near-easy-shots';

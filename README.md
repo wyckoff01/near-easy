@@ -113,12 +113,17 @@ Saved activity lives in `localStorage` on the device. A stake row is written onl
 
 ## Setup
 
-Requirements: Node.js 20 or newer, and npm.
+Requirements:
+
+- Node.js 22.18 or newer, and the npm that comes with it. Node.js 22.18 and Node.js 24 LTS both qualify. `node scripts/rate-limit-check.ts` uses Node’s built-in TypeScript type stripping, which is on by default from 22.18. Older Node versions cannot run that file.
+- Google Chrome or Chromium, only for `scripts/verify.mjs`. macOS looks in `/Applications` for Google Chrome and Chromium. Linux looks for `google-chrome`, `google-chrome-stable`, `chromium`, and `chromium-browser` in `/usr/bin`, `/snap/bin`, and on `PATH`. Set `CHROME_PATH` when the browser is installed somewhere else.
 
 ```bash
-npm install
+npm ci
 cp .env.example .env
 ```
+
+`npm ci` installs the exact versions in `package-lock.json`. Use it for a clean checkout. `npm install` also works when you are changing dependencies.
 
 Edit `.env` and set `GEMINI_API_KEY` to a Gemini Developer API key from Google AI Studio. Keep the key on the free tier. `.env` is git-ignored. Do not commit it, print it, or put it in frontend code. For a Vercel deployment, add the same name as a server environment variable. Do not give it a `VITE_` prefix.
 
@@ -171,15 +176,13 @@ HOST=0.0.0.0 PORT=4173 npm start
 Automated checks do not broadcast a transaction and do not call the Tidepool faucet or `/v0/demo/run`.
 
 ```bash
-node scripts/funding-check.mjs
-node scripts/stake-check.mjs
-node scripts/rate-limit-check.ts
+npm test
 node scripts/verify.mjs
 ```
 
-`rate-limit-check.ts` exercises the in-memory assistant limiter. It does not call Gemini.
+`npm test` runs `scripts/funding-check.mjs`, `scripts/stake-check.mjs`, and `scripts/rate-limit-check.ts`. Those checks do not open a browser, broadcast a transaction, or call Gemini. `rate-limit-check.ts` exercises the in-memory assistant limiter.
 
-`verify.mjs` needs a running dev server and Google Chrome or Chromium. It looks for standard macOS/Linux browser paths; otherwise set `CHROME_PATH` to the full browser executable. You can set `APP_URL` for a non-default local server. It walks the pages, the assistant handoff, a live Gemini reply when the key is set, and a prepared Base Sepolia deposit. Preparing a deposit creates a real Tidepool quote in `PENDING_DEPOSIT`. It does not send tokens. Leave those quotes unfinished.
+`verify.mjs` needs Google Chrome or Chromium and a running app. Use `npm run dev`, or use `npm start` after `npm run build`. The default address is `http://127.0.0.1:5173`. For the production preview, set `APP_URL=http://127.0.0.1:4173`. The script checks the nine pages at desktop and phone widths, the assistant handoff, a live Gemini reply when the key is set, and a prepared Base Sepolia deposit. Preparing a deposit creates a real Tidepool quote in `PENDING_DEPOSIT`. It does not send tokens or approve a wallet. Leave those quotes unfinished.
 
 `npm run build` typechecks and writes `dist/`. Confirm the client assets do not contain `GEMINI_API_KEY`, `usetidepool`, or `chaindefuser`.
 
