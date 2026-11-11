@@ -1,8 +1,21 @@
 import puppeteer from 'puppeteer-core';
 import { mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
 const base = process.env.APP_URL ?? 'http://127.0.0.1:5173';
-const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const chrome = [
+  process.env.CHROME_PATH,
+  process.env.PUPPETEER_EXECUTABLE_PATH,
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+].find((candidate) => candidate && existsSync(candidate));
+if (!chrome) {
+  console.error('Chrome/Chromium not found. Set CHROME_PATH to your browser executable.');
+  process.exit(1);
+}
 const out = '/tmp/near-easy-shots';
 await mkdir(out, { recursive: true });
 
