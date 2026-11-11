@@ -6,6 +6,16 @@ You approve every signature in your own wallet. The app does not ask for a seed 
 
 The public app is [https://near-easy.vercel.app](https://near-easy.vercel.app). The source is in this repository. Confirmed testnet receipts are listed below. Describe a transaction as successful only when NEAR finalized it, or when Tidepool returned `SUCCESS` for that deposit.
 
+## Hackathon scope, dependencies, and demo
+
+This repository was created during the 2026 NEAR Hackathon development window (November 9, 2026). Its history is preserved on `main`; the final demo transactions were completed on November 10. The project uses existing open-source libraries and hosted services rather than claiming those dependencies were developed by this team. The app and its NEAR-specific functionality are the submitted work.
+
+Core dependencies include React, React Router, Vite, TypeScript, Google's Gemini API client (`@google/genai`), HOT Connect (`@hot-labs/near-connect`), Solana Web3.js and SPL Token, and the 1Click SDK package. Tidepool is an independent community-operated testnet service; it is not an official NEAR Intents testnet. Dependency versions are recorded in `package-lock.json`. The project was developed with AI coding assistance. These services and libraries are credited, not claimed as original code.
+
+The hackathon demo video combines high-resolution app captures with *labelled designed recreations* of verified testnet results. It is not an unedited live recording. The exact confirmed stake and funding receipts are linked below; the Activity page only includes the earlier built-in results on a clean browser. The application does not custody funds, approve transactions itself, or enable mainnet transactions.
+
+License for the code in this repository: [MIT](LICENSE). Third-party packages and services keep their own licenses and terms.
+
 ## Quick Start for Hackathon Judges
 
 Open [https://near-easy.vercel.app](https://near-easy.vercel.app). No install is required to review the interface. Approve a wallet prompt only if you choose to broadcast a new testnet transaction yourself.
@@ -169,7 +179,7 @@ node scripts/verify.mjs
 
 `rate-limit-check.ts` exercises the in-memory assistant limiter. It does not call Gemini.
 
-`verify.mjs` needs Google Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` and a running dev server. It walks the pages, the assistant handoff, a live Gemini reply when the key is set, and a prepared Base Sepolia deposit. Preparing a deposit creates a real Tidepool quote in `PENDING_DEPOSIT`. It does not send tokens. Leave those quotes unfinished.
+`verify.mjs` needs a running dev server and Google Chrome or Chromium. It looks for standard macOS/Linux browser paths; otherwise set `CHROME_PATH` to the full browser executable. You can set `APP_URL` for a non-default local server. It walks the pages, the assistant handoff, a live Gemini reply when the key is set, and a prepared Base Sepolia deposit. Preparing a deposit creates a real Tidepool quote in `PENDING_DEPOSIT`. It does not send tokens. Leave those quotes unfinished.
 
 `npm run build` typechecks and writes `dist/`. Confirm the client assets do not contain `GEMINI_API_KEY`, `usetidepool`, or `chaindefuser`.
 
