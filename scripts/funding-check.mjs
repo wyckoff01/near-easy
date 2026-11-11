@@ -1,5 +1,7 @@
 import { createServer } from 'vite';
 
+const integration = process.argv.includes('--integration');
+
 const server = await createServer({
   server: { middlewareMode: true },
   appType: 'custom',
@@ -14,6 +16,13 @@ const rpc = await server.ssrLoadModule('/src/funding/originRpc.ts');
 const evm = await server.ssrLoadModule('/src/funding/evmWallet.ts');
 const solanaTx = await server.ssrLoadModule('/src/funding/solanaTransfer.ts');
 const solanaWallet = await server.ssrLoadModule('/src/funding/solanaWallet.ts');
+
+if (!integration) {
+  globalThis.fetch = async (input) => {
+    const target = typeof input === 'string' ? input : input instanceof URL ? String(input) : input?.url ?? 'unknown';
+    throw new Error(`npm test blocked a network request to ${target}. Run npm run test:integration for live checks.`);
+  };
+}
 
 const failures = [];
 function check(name, ok, detail = '') {
@@ -224,15 +233,33 @@ check('wallet standard failure keeps its reason', origin.explainOriginError({ me
 check('missing signed transaction keeps its reason', origin.explainOriginError(new Error('The wallet did not return a signed transaction.')).includes('did not return a signed transaction'));
 check('seed phrase is still refused', origin.explainOriginError(new Error('paste your seed phrase')).includes('will not ask for a seed phrase'));
 check('declined wallet stays a decline', origin.explainOriginError({ code: 4001, message: 'User rejected the request.' }).includes('declined'));
-const { Keypair } = await import('@solana/web3.js');
-const freshOwner = Keypair.generate().publicKey.toBase58();
-const prior = await rpc.findConfirmedSolanaDeposit({
-  owner: freshOwner,
+check('a malformed owner is not treated as already broadcast', await rpc.findConfirmedSolanaDeposit({
+  owner: 'not-an-address',
   depositAddress: depositOwner,
   amount: '1000000',
   mint,
-});
-check('an account with no signatures is not treated as already broadcast', prior === null);
+}) === null);
+check('a zero amount is not treated as already broadcast', await rpc.findConfirmedSolanaDeposit({
+  owner: payer,
+  depositAddress: depositOwner,
+  amount: '0',
+  mint,
+}) === null);
+if (integration) {
+  try {
+    const { Keypair } = await import('@solana/web3.js');
+    const freshOwner = Keypair.generate().publicKey.toBase58();
+    const prior = await rpc.findConfirmedSolanaDeposit({
+      owner: freshOwner,
+      depositAddress: depositOwner,
+      amount: '1000000',
+      mint,
+    });
+    check('an account with no signatures is not treated as already broadcast', prior === null, prior ?? '');
+  } catch (error) {
+    check('an account with no signatures is not treated as already broadcast', false, error instanceof Error ? error.message : String(error));
+  }
+}
 
 const baseHash = `0x${'ab'.repeat(32)}`;
 const baseMatch = origin.parseBaseDeposit({
@@ -345,6 +372,11 @@ const sentHash = await evm.sendBaseTransfer({
 }, '0x1111111111111111111111111111111111111111', baseQuote);
 check('missing Base Sepolia is added and the transfer matches the quote', addedSepolia && sentHash === `0x${'cd'.repeat(32)}` && sentCall?.to === call.to && sentCall.data === call.data && sentCall.value === '0x0');
 
+if (!integration) {
+  console.log('Live Tidepool, Solana, Base, and NEAR checks skipped. Run npm run test:integration to run them.');
+}
+
+if (integration) {
 let catalog;
 try {
   catalog = await tide.tidepoolCatalog();
@@ -434,10 +466,11 @@ try {
 } catch (error) {
   check('live Tidepool calls', false, error instanceof Error ? error.message : String(error));
 }
+}
 
 await server.close();
 if (failures.length) {
   console.error(`${failures.length} failed`);
   process.exit(1);
 }
-console.log('funding checks passed');
+console.log(integration ? 'funding checks passed' : 'funding checks passed (offline)');

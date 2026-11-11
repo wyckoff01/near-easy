@@ -11,7 +11,8 @@
     "build": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit && vite build && node scripts/bundle-api.mjs",
     "preview": "vite preview",
     "start": "vite preview",
-    "test": "node scripts/funding-check.mjs && node scripts/stake-check.mjs && node scripts/rate-limit-check.ts"
+    "test": "node scripts/funding-check.mjs && node scripts/stake-check.mjs && node scripts/rate-limit-check.ts",
+    "test:integration": "node scripts/funding-check.mjs --integration && node scripts/stake-check.mjs --integration && node scripts/rate-limit-check.ts"
   },
   "dependencies": {
     "@defuse-protocol/one-click-sdk-typescript": "^0.1.26",

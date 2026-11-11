@@ -1,5 +1,7 @@
 import { createServer } from 'vite';
 
+const integration = process.argv.includes('--integration');
+
 const server = await createServer({
   server: { middlewareMode: true },
   appType: 'custom',
@@ -10,6 +12,13 @@ const plan = await server.ssrLoadModule('/src/near/stakePlan.ts');
 const chain = await server.ssrLoadModule('/src/near/stakeChain.ts');
 const send = await server.ssrLoadModule('/src/near/stakeSend.ts');
 const logic = await server.ssrLoadModule('/src/logic.ts');
+
+if (!integration) {
+  globalThis.fetch = async (input) => {
+    const target = typeof input === 'string' ? input : input instanceof URL ? String(input) : input?.url ?? 'unknown';
+    throw new Error(`npm test blocked a network request to ${target}. Run npm run test:integration for live checks.`);
+  };
+}
 
 const failures = [];
 function check(name, ok, detail = '') {
@@ -81,15 +90,19 @@ check('mainnet signature is refused before a wallet opens', mainnetBlocked);
 const blockedStake = await send.executeStake({ network: 'mainnet', signerId: 'alice.near', poolId: 'figment.poolv1.near', amountYocto: amount });
 check('executeStake refuses mainnet before a wallet opens', blockedStake.ok === false && blockedStake.message === 'Mainnet staking is not enabled. Nothing was submitted.');
 
-try {
-  const pools = await chain.loadStakePools('testnet');
-  console.log(pools.map((pool) => `${pool.id} ${pool.commission} stake ${pool.poolStake}`).join('\n'));
-  const aurora = pools.find((pool) => pool.id === 'aurora.pool.f863973.m0');
-  check('testnet pools loaded', pools.length > 0, String(pools.length));
-  check('aurora commission is 9%', aurora?.commission === '9%', aurora ? `${aurora.id} ${aurora.commission}` : 'missing');
-  check('every pool has a commission', pools.every((pool) => /^\d+(?:\.\d+)?%$/.test(pool.commission)));
-} catch (error) {
-  check('testnet pools loaded', false, error instanceof Error ? error.message : String(error));
+if (integration) {
+  try {
+    const pools = await chain.loadStakePools('testnet');
+    console.log(pools.map((pool) => `${pool.id} ${pool.commission} stake ${pool.poolStake}`).join('\n'));
+    const aurora = pools.find((pool) => pool.id === 'aurora.pool.f863973.m0');
+    check('testnet pools loaded', pools.length > 0, String(pools.length));
+    check('aurora commission is 9%', aurora?.commission === '9%', aurora ? `${aurora.id} ${aurora.commission}` : 'missing');
+    check('every pool has a commission', pools.every((pool) => /^\d+(?:\.\d+)?%$/.test(pool.commission)));
+  } catch (error) {
+    check('testnet pools loaded', false, error instanceof Error ? error.message : String(error));
+  }
+} else {
+  console.log('Live validator check skipped. Run npm run test:integration to load testnet pools.');
 }
 
 await server.close();
@@ -97,4 +110,4 @@ if (failures.length) {
   console.error(`\n${failures.length} check(s) failed`);
   process.exit(1);
 }
-console.log('\nStake checks passed');
+console.log(integration ? '\nStake checks passed' : '\nStake checks passed (offline)');

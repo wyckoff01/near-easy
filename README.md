@@ -177,10 +177,13 @@ Automated checks do not broadcast a transaction and do not call the Tidepool fau
 
 ```bash
 npm test
+npm run test:integration
 node scripts/verify.mjs
 ```
 
-`npm test` runs `scripts/funding-check.mjs`, `scripts/stake-check.mjs`, and `scripts/rate-limit-check.ts`. Those checks do not open a browser, broadcast a transaction, or call Gemini. `rate-limit-check.ts` exercises the in-memory assistant limiter.
+`npm test` is the reproducible check. It runs `scripts/funding-check.mjs`, `scripts/stake-check.mjs`, and `scripts/rate-limit-check.ts` without calling an RPC, Tidepool, Gemini, or the live validator list. It still checks parsing, transfer construction, mainnet refusals, wallet-approval rules, and the in-memory assistant limiter. A network timeout cannot fail this command. The same assertions run on every repeat.
+
+`npm run test:integration` runs those checks and then the live ones: a Tidepool catalog and quote, one prepared deposit that must stay `PENDING_DEPOSIT`, Solana devnet and Base Sepolia reads, the test wNEAR limitation, and the current testnet validator list. It does not call Gemini, open a browser, broadcast a transaction, or approve a wallet. Leave the prepared deposit unfinished. These calls depend on outside services. A timeout fails the check. It is not reported as a pass.
 
 `verify.mjs` needs Google Chrome or Chromium and a running app. Use `npm run dev`, or use `npm start` after `npm run build`. The default address is `http://127.0.0.1:5173`. For the production preview, set `APP_URL=http://127.0.0.1:4173`. The script checks the nine pages at desktop and phone widths, the assistant handoff, a live Gemini reply when the key is set, and a prepared Base Sepolia deposit. Preparing a deposit creates a real Tidepool quote in `PENDING_DEPOSIT`. It does not send tokens or approve a wallet. Leave those quotes unfinished.
 
